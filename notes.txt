@@ -1,0 +1,13 @@
+Project config -> package.json / project dependencies and scripts 
+Frontend (v0) → Next.js Backend (Vercel) → External Services
+                     ↓
+              MongoDB + OpenAI
+
+Next.js config - next.config.js  / how to behave and env vars 
+Typescript config - tsconfig.json  / how to compile
+
+CORE:
+- database connection - lib/mongodb.ts 
+- ai integration - lib/openai.ts 
+- auth handler - handles google o auth, creates user in db, generates openai assistant 
+- app.tsx - app wrapper, for session management 
