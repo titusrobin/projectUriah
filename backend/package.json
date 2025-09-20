@@ -1,0 +1,10 @@
+{
+    "name": "login-backend",
+    "dependencies": {
+      "next": "14",
+      "next-auth": "^4.24.0",
+      "mongodb": "^5.9.0",
+      "openai": "^4.0.0"
+    }
+  }
+  
