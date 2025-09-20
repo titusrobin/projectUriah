@@ -1,10 +1,24 @@
 {
-    "name": "login-backend",
-    "dependencies": {
-      "next": "14",
-      "next-auth": "^4.24.0",
-      "mongodb": "^5.9.0",
-      "openai": "^4.0.0"
-    }
+  "name": "projecturiah-backend",
+  "version": "1.0.0",
+  "description": "Backend API for ProjectUriah MVP",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "next-auth": "^4.24.0",
+    "mongodb": "^5.9.0",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0"
   }
+}
   

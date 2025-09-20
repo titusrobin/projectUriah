@@ -2,9 +2,10 @@
 // Remove this in production!
 
 export default function handler(req: any, res: any) {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ error: 'Not found' });
-  }
+  // Allow in production for debugging purposes - remove later
+  // if (process.env.NODE_ENV === 'production') {
+  //   return res.status(404).json({ error: 'Not found' });
+  // }
 
   const envVars = {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? '✅ Set' : '❌ Missing',
