@@ -1,4 +1,4 @@
-// backend/pages/api/auth/nextauth.ts
+// backend/pages/api/auth/[...nextauth].ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
@@ -10,7 +10,11 @@ export default NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: { params: { scope: "openid email profile https://www.googleapis.com/auth/gmail.readonly" } }
+      authorization: {
+        params: {
+          scope: "openid email profile https://www.googleapis.com/auth/gmail.readonly"
+        }
+      }
     }),
     EmailProvider({
       server: process.env.EMAIL_SERVER!,
@@ -25,7 +29,7 @@ export default NextAuth({
 
       const existing = await users.findOne({ email: user.email });
       if (!existing) {
-        const assistant = await createAssistant(); // create OpenAI assistant
+        const assistant = await createAssistant();
         await users.insertOne({
           firstName: user.name?.split(" ")[0] || "",
           lastName: user.name?.split(" ").slice(1).join(" ") || "",
