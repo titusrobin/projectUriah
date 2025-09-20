@@ -6,6 +6,7 @@ import clientPromise from "../../../lib/mongodb";
 import { createAssistant } from "../../../lib/openai";
 
 export default NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -23,24 +24,52 @@ export default NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }) {
-      const client = await clientPromise;
-      const db = client.db("app");
-      const users = db.collection("users");
+      try {
+        console.log("SignIn callback triggered for:", user.email);
+        
+        const client = await clientPromise;
+        const db = client.db("app");
+        const users = db.collection("users");
 
-      const existing = await users.findOne({ email: user.email });
-      if (!existing) {
-        const assistant = await createAssistant();
-        await users.insertOne({
-          firstName: user.name?.split(" ")[0] || "",
-          lastName: user.name?.split(" ").slice(1).join(" ") || "",
-          email: user.email,
-          provider: account?.provider,
-          googleAccessToken: account?.access_token || null,
-          openaiAssistantId: assistant.id,
-          createdAt: new Date()
-        });
+        const existing = await users.findOne({ email: user.email });
+        if (!existing) {
+          console.log("Creating new user and assistant for:", user.email);
+          
+          // Create assistant with error handling
+          let assistantId = null;
+          try {
+            const assistant = await createAssistant();
+            assistantId = assistant.id;
+            console.log("Created assistant:", assistantId);
+          } catch (error) {
+            console.error("Failed to create assistant:", error);
+            // Continue without assistant - don't fail the signin
+          }
+
+          await users.insertOne({
+            firstName: user.name?.split(" ")[0] || "",
+            lastName: user.name?.split(" ").slice(1).join(" ") || "",
+            email: user.email,
+            provider: account?.provider,
+            googleAccessToken: account?.access_token || null,
+            openaiAssistantId: assistantId,
+            createdAt: new Date()
+          });
+          console.log("User created successfully");
+        } else {
+          console.log("User already exists:", user.email);
+        }
+        return true;
+      } catch (error) {
+        console.error("SignIn callback error:", error);
+        // Return false to prevent signin on error, or true to allow it
+        return true; // Allow signin even if database operations fail
       }
-      return true;
     }
-  }
+  },
+  pages: {
+    signIn: '/api/auth/signin',
+    error: '/api/auth/error',
+  },
+  debug: process.env.NODE_ENV === 'development',
 });
