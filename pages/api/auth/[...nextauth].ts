@@ -1,75 +1,130 @@
-// backend/pages/api/auth/[...nextauth].ts
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import EmailProvider from "next-auth/providers/email";
 import clientPromise from "../../../lib/mongodb";
 import { createAssistant } from "../../../lib/openai";
+import { encrypt } from "../../../lib/encryption";
 
-export default NextAuth({
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error('Missing Google OAuth credentials');
+}
+
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/gmail.readonly"
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: [
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send"
+          ].join(" ")
         }
       }
-    }),
-    EmailProvider({
-      server: process.env.EMAIL_SERVER!,
-      from: process.env.EMAIL_FROM!
     })
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       try {
-        console.log("SignIn callback triggered for:", user.email);
+        console.log("🔐 SignIn callback triggered for:", user.email);
         
+        if (!account?.access_token) {
+          console.error("❌ No access token received");
+          return false;
+        }
+
         const client = await clientPromise;
-        const db = client.db("app");
+        const db = client.db("uriah");
         const users = db.collection("users");
 
-        const existing = await users.findOne({ email: user.email });
-        if (!existing) {
-          console.log("Creating new user and assistant for:", user.email);
+        const existingUser = await users.findOne({ email: user.email });
+
+        if (!existingUser) {
+          console.log("🆕 Creating new user:", user.email);
           
-          // Create assistant with error handling
           let assistantId = null;
           try {
-            const assistant = await createAssistant();
+            const assistant = await createAssistant(user.email!);
             assistantId = assistant.id;
-            console.log("Created assistant:", assistantId);
+            console.log("✅ Assistant created:", assistantId);
           } catch (error) {
-            console.error("Failed to create assistant:", error);
-            // Continue without assistant - don't fail the signin
+            console.error("❌ Failed to create assistant:", error);
           }
 
+          const encryptedToken = encrypt(account.access_token);
+          const encryptedRefreshToken = account.refresh_token 
+            ? encrypt(account.refresh_token) 
+            : null;
+
           await users.insertOne({
+            email: user.email,
             firstName: user.name?.split(" ")[0] || "",
             lastName: user.name?.split(" ").slice(1).join(" ") || "",
-            email: user.email,
-            provider: account?.provider,
-            googleAccessToken: account?.access_token || null,
+            profileImage: user.image || null,
+            provider: account.provider,
+            googleAccessToken: encryptedToken,
+            googleRefreshToken: encryptedRefreshToken,
+            tokenExpiresAt: account.expires_at 
+              ? new Date(account.expires_at * 1000) 
+              : null,
             openaiAssistantId: assistantId,
-            createdAt: new Date()
+            onboardingCompleted: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
           });
-          console.log("User created successfully");
+
+          console.log("✅ User created successfully");
         } else {
-          console.log("User already exists:", user.email);
+          console.log("👤 Existing user logging in:", user.email);
+          
+          const encryptedToken = encrypt(account.access_token);
+          const encryptedRefreshToken = account.refresh_token 
+            ? encrypt(account.refresh_token) 
+            : null;
+
+          await users.updateOne(
+            { email: user.email },
+            {
+              $set: {
+                googleAccessToken: encryptedToken,
+                googleRefreshToken: encryptedRefreshToken,
+                tokenExpiresAt: account.expires_at 
+                  ? new Date(account.expires_at * 1000) 
+                  : null,
+                updatedAt: new Date()
+              }
+            }
+          );
+
+          console.log("✅ User tokens updated");
         }
+
         return true;
       } catch (error) {
-        console.error("SignIn callback error:", error);
-        // Return false to prevent signin on error, or true to allow it
-        return true; // Allow signin even if database operations fail
+        console.error("❌ SignIn callback error:", error);
+        return false;
       }
+    },
+    
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.email = token.email;
+      }
+      return session;
     }
   },
   pages: {
-    signIn: '/api/auth/signin',
-    error: '/api/auth/error',
+    signIn: '/',
+    error: '/auth/error',
   },
   debug: process.env.NODE_ENV === 'development',
-});
+};
+
+export default NextAuth(authOptions);

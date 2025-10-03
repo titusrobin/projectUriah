@@ -10,10 +10,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "googleapis": "^128.0.0",
+    "mongodb": "^5.9.2",
     "next": "^14.0.0",
-    "next-auth": "^4.24.0",
-    "mongodb": "^5.9.0",
-    "openai": "^4.0.0"
+    "next-auth": "^4.24.11",
+    "openai": "^4.104.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -21,4 +24,3 @@
     "typescript": "^5.0.0"
   }
 }
-  
