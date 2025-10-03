@@ -1,3 +1,4 @@
+// pages/api/auth/error.tsx
 import { GetServerSideProps } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { getProviders, signIn } from 'next-auth/react'

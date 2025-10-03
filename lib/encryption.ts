@@ -1,3 +1,4 @@
+// lib/encryption.ts
 import crypto from 'crypto';
 
 if (!process.env.ENCRYPTION_KEY) {

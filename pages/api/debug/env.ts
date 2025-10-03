@@ -1,3 +1,4 @@
+// pages/api/debug/env.ts
 // Debug endpoint to check environment variables
 // Remove this in production!
 
